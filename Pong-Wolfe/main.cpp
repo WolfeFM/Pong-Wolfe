@@ -19,6 +19,7 @@ sf::SoundBuffer whoaBuffer;
 sf::Sound whoaSound;
 sf::Font font;
 sf::Texture paddleTexture;
+sf::Music soundtrack;
 
 class paddle
 {
@@ -147,6 +148,7 @@ class ball
 				angle = pi - angle;
 				circle.setPosition(sf::Vector2f(leftP.x() + leftP.width() + 0.05f, circle.getPosition().y));
 				speed += 50;
+				angle += magnifyAngle(leftP);
 				whoaSound.play();
 			}
 
@@ -170,10 +172,11 @@ class ball
 			distx2 = (centerx - testx) * (centerx - testx);
 			disty2 = (centery - testy) * (centery - testy);
 			if ((distx2 + disty2) <= (circle.getRadius() * circle.getRadius())) {
-				//bounce off left paddle here
-				angle = pi - angle + (2 * pi);
+				//bounce off right paddle here
+				angle = pi - angle;
 				circle.setPosition(sf::Vector2f(rightP.x() - (circle.getRadius() * 2) - 0.05f, circle.getPosition().y));
 				speed += 50;
+				angle -= magnifyAngle(rightP);
 				whoaSound.play();
 			}
 		}
@@ -185,6 +188,12 @@ class ball
 		float y() {
 			return circle.getPosition().y + circle.getRadius();
 		}
+
+		float magnifyAngle(paddle p) {
+			float magnification;
+			magnification = (circle.getPosition().y + circle.getRadius() - (p.y() + p.height() / 2)) * 2 / p.height();
+			return magnification * 40 * pi /360;
+		}
 };
 
 int main()
@@ -195,7 +204,6 @@ int main()
 	
 	sf::Text leftScoreText;
 	leftScoreText.setFont(font);
-	leftScoreText.setFillColor(sf::Color::Blue);
 	leftScoreText.setCharacterSize(48);
 	leftScoreText.setPosition(sf::Vector2f(40,40));
 	sf::Text rightScoreText;
@@ -212,6 +220,13 @@ int main()
 	playAgain.setString("Press the spacebar to play again or esc to quit.");
 	playAgain.setRotation(-30.f);
 
+	sf::Text gameMode;
+	gameMode.setFont(font);
+	gameMode.setFillColor(sf::Color::Green);
+	gameMode.setCharacterSize(36);
+	gameMode.setPosition(sf::Vector2f(60, 300));
+	gameMode.setString("Press 1 for single-player (arrow key controls). \nPress 2 for multi-player (arrow keys vs WASD).");
+	
 	if (!boingBuffer.loadFromFile("boingPong.wav")) {
 		return -1;
 	}
@@ -240,17 +255,21 @@ int main()
 		std::cout << "oops";
 		return -1;
 	}
+	if (!soundtrack.openFromFile("Battle_Against_a_Clueless_Foe.wav")) {
+		return -1;
+	}
+	soundtrack.setLoop(true);
+	soundtrack.play();
 
 	paddle leftPaddle(10.f, 295.f);
-	leftPaddle.rectangle.setFillColor(sf::Color::Blue);
-
 	paddle rightPaddle(580.f, 295.f);
 	rightPaddle.rectangle.setTexture(&paddleTexture, true);
 
 	ball playBall(sf::Vector2f(295, 295));
 
 	bool addedScore = false;
-	
+	bool playing = false;
+	bool AI = false;
 
 	sf::Time dt;
 	sf::Clock clock;
@@ -268,22 +287,53 @@ int main()
 		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape)) {
 			window.close();
 		}
+		
+		if (playing) {
+			if (AI) {
+				//do left paddle AI here
+				if (playBall.y() < leftPaddle.y() - 5.f) {
+					leftPaddle.move(true, dt);
+				}
+				else if (playBall.y() > (leftPaddle.y() + leftPaddle.height() + 5.f)) {
+					leftPaddle.move(false, dt);
+				}
+			}
+			else {
+				if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
+					leftPaddle.move(true, dt);
+				}
+				if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
+					leftPaddle.move(false, dt);
+				}
+			}
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
+				rightPaddle.move(true, dt);
+			}
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
+				rightPaddle.move(false, dt);
+			}
 
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
-			leftPaddle.move(true, dt);
+			if (playBall.x() < 650.f && playBall.x() > -50.f) {
+				playBall.move(dt);
+				playBall.checkCollision(leftPaddle, rightPaddle, dt);
+			}
 		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
-			leftPaddle.move(false, dt);
+		else {
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num1) || sf::Keyboard::isKeyPressed(sf::Keyboard::Numpad1)) {
+				//set to single player
+				AI = true;
+				playing = true;
+				leftPaddle.rectangle.setFillColor(sf::Color::Blue);
+				leftScoreText.setFillColor(sf::Color::Blue);
+			}
+			if (sf::Keyboard::isKeyPressed(sf::Keyboard::Num2) || sf::Keyboard::isKeyPressed(sf::Keyboard::Numpad2)) {
+				//set to multiplayer
+				AI = false;
+				playing = true;
+				leftPaddle.rectangle.setTexture(&paddleTexture, true);
+				leftScoreText.setFillColor(sf::Color::White);
+			}
 		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Up)) {
-			rightPaddle.move(true, dt);
-		}
-		if (sf::Keyboard::isKeyPressed(sf::Keyboard::Down)) {
-			rightPaddle.move(false, dt);
-		}
-
-		playBall.move(dt);
-		playBall.checkCollision(leftPaddle, rightPaddle, dt);
 
 		if (playBall.x() < -5.f || playBall.x() > 605.f) {
 			if (playBall.x() < -5.f && !addedScore) {
@@ -323,17 +373,21 @@ int main()
 		rightScoreText.setString(std::to_string(rightScore));
 
 		window.clear();
-		window.draw(leftPaddle.rectangle);
-		window.draw(rightPaddle.rectangle);
-		window.draw(leftScoreText);
-		window.draw(rightScoreText);
+		if (playing) {
+			window.draw(leftPaddle.rectangle);
+			window.draw(rightPaddle.rectangle);
+			window.draw(leftScoreText);
+			window.draw(rightScoreText);
+			window.draw(playBall.circle);
+		}
+		else {
+			window.draw(gameMode); 
+		}
 		if (leftScore >= 5 || rightScore >= 5) {
 			window.draw(playAgain);
 		}
-		window.draw(playBall.circle);
 		window.display();
 
-		
 	}
 
 	return 0;
