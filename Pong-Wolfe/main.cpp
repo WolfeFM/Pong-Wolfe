@@ -226,6 +226,29 @@ int main()
 	gameMode.setCharacterSize(36);
 	gameMode.setPosition(sf::Vector2f(60, 300));
 	gameMode.setString("Press 1 for single-player (arrow key controls). \nPress 2 for multi-player (arrow keys vs WASD).");
+
+	sf::Text credits;
+	credits.setFont(font);
+	credits.setFillColor(sf::Color::Green);
+	credits.setCharacterSize(18);
+	credits.setPosition(sf::Vector2f(180, 500));
+	credits.setString("Font: Steelfish Rounded (from public domain) \nMusic: 'Battle Against a Clueless Foe' by Shane Mesa (used with CC license) \nAll else: Mitchell F. Wolfe");
+
+	sf::Text title;
+	title.setFont(font);
+	title.setFillColor(sf::Color::Green);
+	title.setCharacterSize(90);
+	title.setPosition(sf::Vector2f(60, 50));
+	title.setString("Wolfe's Big Box o' Pong!");
+	title.setRotation(15.f);
+
+	sf::Text title2;
+	title2.setFont(font);
+	title2.setFillColor(sf::Color::Cyan);
+	title2.setCharacterSize(90);
+	title2.setPosition(sf::Vector2f(57, 47));
+	title2.setString("Wolfe's Big Box o' Pong!");
+	title2.setRotation(15.f);
 	
 	if (!boingBuffer.loadFromFile("boingPong.wav")) {
 		return -1;
@@ -382,12 +405,14 @@ int main()
 		}
 		else {
 			window.draw(gameMode); 
+			window.draw(credits);
+			window.draw(title2);
+			window.draw(title);
 		}
 		if (leftScore >= 5 || rightScore >= 5) {
 			window.draw(playAgain);
 		}
 		window.display();
-
 	}
 
 	return 0;
