@@ -108,7 +108,7 @@ class ball
 			circle.setPosition(sf::Vector2f(295.f, std::rand()%590));
 		}
 
-		void checkCollision(paddle leftP, paddle rightP, sf::Time dt) {
+		void checkCollision(paddle leftP, paddle rightP, paddle midP, sf::Time dt) {
 			if (circle.getPosition().y < 0) {
 				//bounce off top
 				angle = -angle;
@@ -178,6 +178,37 @@ class ball
 				speed += 50;
 				angle -= magnifyAngle(rightP);
 				whoaSound.play();
+			}
+
+			testx = centerx;
+			testy = centery;
+			distx2 = 0;
+			disty2 = 0;
+
+			if (centerx < midP.x()) {
+				testx = midP.x();
+			}
+			else if (centerx > midP.x() + midP.width()) {
+				testx = midP.x() + midP.width();
+			}
+			if (centery < midP.y()) {
+				testy = midP.y();
+			}
+			else if (centery > midP.y() + midP.height()) {
+				testy = midP.y() + midP.height();
+			}
+			distx2 = (centerx - testx) * (centerx - testx);
+			disty2 = (centery - testy) * (centery - testy);
+			if ((distx2 + disty2) <= (circle.getRadius() * circle.getRadius())) {
+				//bounce off mid paddle here
+				angle = pi - angle;
+				if (circle.getPosition().x >=300.f) {
+					circle.setPosition(sf::Vector2f(midP.x() + midP.width() + 0.05f, circle.getPosition().y));
+				}
+				else {
+					circle.setPosition(sf::Vector2f(midP.x() - (circle.getRadius() * 2) - 0.05f, circle.getPosition().y));
+				}
+				boingSound.play();
 			}
 		}
 
@@ -287,12 +318,15 @@ int main()
 	paddle leftPaddle(10.f, 295.f);
 	paddle rightPaddle(580.f, 295.f);
 	rightPaddle.rectangle.setTexture(&paddleTexture, true);
+	paddle midPaddle(295.f, 0.f);
+	midPaddle.rectangle.setFillColor(sf::Color::Magenta);
 
 	ball playBall(sf::Vector2f(295, 295));
 
 	bool addedScore = false;
 	bool playing = false;
 	bool AI = false;
+	bool midUp = false;
 
 	sf::Time dt;
 	sf::Clock clock;
@@ -336,9 +370,23 @@ int main()
 				rightPaddle.move(false, dt);
 			}
 
+			if (midUp) {
+				midPaddle.move(true, dt);
+			}
+			else {
+				midPaddle.move(false, dt);
+			}
+
+			if (midPaddle.y() <= 2.f) {
+				midUp = false;
+			}
+			else if (midPaddle.y() + midPaddle.height() >= 598.f) {
+				midUp = true;
+			}
+
 			if (playBall.x() < 650.f && playBall.x() > -50.f) {
 				playBall.move(dt);
-				playBall.checkCollision(leftPaddle, rightPaddle, dt);
+				playBall.checkCollision(leftPaddle, rightPaddle, midPaddle, dt);
 			}
 		}
 		else {
@@ -380,6 +428,7 @@ int main()
 					playBall.returnBall();
 					leftPaddle.setPosition(sf::Vector2f(leftPaddle.x(),(300 - leftPaddle.height()/2)));
 					rightPaddle.setPosition(sf::Vector2f(rightPaddle.x(), (300 - rightPaddle.height() / 2)));
+					midPaddle.setPosition(sf::Vector2f(295.f, 0.f));
 					addedScore = false;
 				}
 				else if (sf::Keyboard::isKeyPressed(sf::Keyboard::Escape)) {
@@ -402,15 +451,18 @@ int main()
 			window.draw(leftScoreText);
 			window.draw(rightScoreText);
 			window.draw(playBall.circle);
+			if (leftScore >= 5 || rightScore >= 5) {
+				window.draw(playAgain);
+			}
+			else {
+				window.draw(midPaddle.rectangle);
+			}
 		}
 		else {
 			window.draw(gameMode); 
 			window.draw(credits);
 			window.draw(title2);
 			window.draw(title);
-		}
-		if (leftScore >= 5 || rightScore >= 5) {
-			window.draw(playAgain);
 		}
 		window.display();
 	}
